@@ -127,7 +127,8 @@ public class TransformResultsFile {
 	}
 	
 	//Primo Reducer:
-	//Legge una coppia per ogni
+	//Input: Key(Solver;Time), Value
+	//Output: Long(Numero occorenza di un solver, Value )
 	static class Reducer1 extends Reducer<KeySolverTime,Text, LongWritable, Text>{
 		static int cont=0;
 		static String lastSolver="";
@@ -135,12 +136,13 @@ public class TransformResultsFile {
 		protected void reduce(KeySolverTime key, Iterable<Text> values, Reducer<KeySolverTime, Text, LongWritable, Text>.Context context)
 				throws IOException, InterruptedException {
 			
-			
+			//se cambia il solver -> reset cont e lastSolver
 			if(!lastSolver.equals(key.getSolver()))
 			{
 				cont=0;
 				lastSolver = key.getSolver();
 			}
+			//conta il numero di istanze di un determinato solver
 			for (Text text : values) {
 				context.write(new LongWritable(cont), text);
 				cont++;
@@ -148,7 +150,8 @@ public class TransformResultsFile {
 		}
 	}
 	
-	
+	//Secondo Mapper:
+	//Stampa (chiave(numero delle istanze) value( solver;time)
 	static class Mapper2 extends Mapper<LongWritable, Text, LongWritable, Text>{
 
 		@Override
@@ -162,6 +165,8 @@ public class TransformResultsFile {
 		}
 		
 	}	
+	//Reducer2:
+	//Concatena tutti i valori per un certa chiava (numero delle istanze lanciate con il solver)
 	static class Reducer2 extends Reducer<LongWritable,Text, LongWritable, Text>{
 
 		@Override
@@ -176,10 +181,12 @@ public class TransformResultsFile {
 				atts.add(text.toString());
 				
 			}
+			//Ordina i valori
 			Collections.sort(atts);
 			for (String string : atts) {
 				row+=string.split(";")[1]+"\t";
 			}
+			//Aggiungi i nomi dei solver solo all'inizio
 			if(key.get()==0) {
 				String header="";
 				for (String string : atts) {
